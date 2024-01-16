@@ -1,0 +1,67 @@
+<!DOCTYPE html>
+
+<html>
+<head>
+	<meta charset="UTF-8">
+	<meta name="viewport" content="width=device-width, initial-scale=1.0">
+	<title>Camera IP</title>
+	<style>
+		body {
+			font-family: Arial, sans-serif;
+			background-color: #f0f0f0;
+		}
+
+        h1 {
+		text-align: center;
+		color: #333;
+	}
+
+	#camera-container {
+		display: flex;
+		flex-direction: column;
+		align-items: center;
+		margin: 50px auto;
+		max-width: 800px;
+		background-color: #fff;
+		box-shadow: 0 0 5px rgba(0, 0, 0, 0.3);
+		padding: 20px;
+	}
+
+	#camera {
+		width: 100%;
+		max-width: 640px;
+		height: auto;
+		margin-bottom: 20px;
+	}
+
+	#retour-button {
+		padding: 10px 20px;
+		font-size: 1.2em;
+		background-color: #26c6db;
+		color: #fff;
+		border: none;
+		border-radius: 5px;
+		cursor: pointer;
+	}
+
+	#retour-button:hover {
+		background-color: #555;
+	}
+</style>
+</head>
+<body>
+	<header>
+		<h1>Systeme de reconnaissance faciale</h1>
+	</header>
+	<main>
+		<div id="camera-container">
+			<img id="camera" src="{{ url_for('camera') }}" alt="Capture caméra">
+			<button id="stop-button">Stop</button>
+		</div>
+
+    <script src="https://code.jquery.com/jquery-3.6.4.min.js"></script>
+    <script src="{{ url_for('static', filename='update_image.js') }}"></script>
+</body>
+	</main>
+</body>
+</html>

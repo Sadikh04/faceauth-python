@@ -1,0 +1,273 @@
+from io import BytesIO
+import cv2
+import face_recognition
+from urllib.parse import urlparse
+
+import numpy as np
+from . import app, db, bcrypt
+from flask import Response, render_template, request, redirect, url_for, flash
+from faceAuth.modele import Utilisateur
+from flask_login import current_user, login_user, logout_user, login_required
+
+from PIL import Image, ImageDraw, ImageFont
+import dlib
+
+
+
+
+nom_connu = []
+empreinte_connu = []
+
+try:
+    users = Utilisateur.query.all()
+
+    for user in users:
+        nom = user.username 
+        empreinte_blob = user.empreinte_facial
+            
+        empreinte = np.frombuffer(empreinte_blob, dtype='float64')
+            
+        nom_connu.append(nom)
+        empreinte_connu.append(empreinte)
+
+    print("Données récupérées avec succès :", nom_connu, empreinte_connu)
+
+except Exception as erreur:
+    print("Erreur :", erreur)
+
+
+#face_detector = cv2.FaceDetectorYN.create("C:\\Users\\izolo\\Desktop\\Cours Machine Learning EC2LT\\projetv2\\faceAuth\\modeles_entraines\\face_detection_yunet_2023mar.onnx", "", (640, 480),score_threshold = 0.9, nms_threshold = 0.3)
+face_detector = dlib.get_frontal_face_detector()
+
+tm = cv2.TickMeter()
+
+
+def gen_frames():
+    cap = cv2.VideoCapture(0)
+    while True:
+                # Capture image webcam
+        ret, frame = cap.read()
+        if not ret:
+                print("Pas d'image capturée")
+                        
+                break
+        
+        frameWidth0 = int(cap.get(cv2.CAP_PROP_FRAME_WIDTH))
+        frameHeight0 = int(cap.get(cv2.CAP_PROP_FRAME_HEIGHT))
+        print(" La définition de la caméra ::::::::::::::::::::::::::::::")
+        print(frameHeight0)
+        print(frameWidth0)
+                #Récuperation des dimensions
+        frameWidth = int(cap.get(cv2.CAP_PROP_FRAME_WIDTH)**1.0)
+        frameHeight = int(cap.get(cv2.CAP_PROP_FRAME_HEIGHT)**1.0)
+                
+
+                # On refinit (ecrase) la taille d'image initialisé du detecteur de visage
+        #face_detector.setInputSize([frameWidth, frameHeight])
+        frame = cv2.resize(frame, (frameWidth, frameHeight))
+        
+        
+
+        tm.start()
+        faces = face_detector(frame, 0) 
+        tm.stop()
+                
+        image_rgb = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
+        pil_image = Image.fromarray(image_rgb)
+                # Création de l'objet draw
+        draw = ImageDraw.Draw(pil_image)
+
+
+        face_loc = []
+                #On vérifie d'abord la detection d'un visage
+        if faces is not None:
+            for idx, face in enumerate(faces):
+                print('Visage {}, coordonnées Left-Top: ({:.0f}, {:.0f}), Largeur: {:.0f}, Hauteur {:.0f}'.format(idx+1, face[0], face[1], face[2], face[3]))
+                        # Conversion des coordornées(réels) en entiers
+                        # On recupere pas la derniere valeur
+                coords = face[:-1].astype(np.int32)
+                    # On crée un tuple qui va contenir les quatre (4) coordonnées du visage
+                    # Top, right, bottom, left
+                thistuple = (coords[1],coords[0]+coords[2],coords[1]+coords[3],coords[0])
+                face_loc.append(thistuple)
+                    
+                    # Calcul des empreintes
+            #face_encodings = face_recognition.face_encodings(image_rgb, face_loc)
+            face_encodings = face_recognition.face_encodings(frame)
+            print(face_encodings)
+
+                    # Cette boucle va permettre de comparer les empreintes connues
+                    # à celle des visages fournis par la webcam
+            for (top, right, bottom, left), face_encoding in zip(face_loc, face_encodings):
+                                    
+                matches = face_recognition.compare_faces(empreinte_connu, face_encoding, tolerance=0.45)
+                name = "Personne inconnue"
+
+                face_distances = face_recognition.face_distance(empreinte_connu, face_encoding)
+                                
+                best_match_index = np.argmin(face_distances)
+                        
+                        #id_utilisateur = current_user.id 
+                if matches[best_match_index]:
+                        
+                    name = nom_connu[best_match_index]
+                     
+                    print("{} se trouve dans la photo founie".format(name))
+                    fichier = open("presence.txt", "a", encoding='utf-8')
+                    fichier.write("\n"+name+' ')
+                    fichier.close()
+
+                        
+                    text_width, text_height = draw.textsize(name)
+                    draw.rectangle(
+                                ((left, top), (right+10, bottom)), 
+                                outline=(50, 181, 201),
+                                width=5,
+                            )
+                            
+                            
+                    font = ImageFont.truetype("arial.ttf", size=30)
+                    draw.text(
+                            (left , bottom - text_height +6), 
+                            name, 
+                            font = font,
+                            fill=(255, 255, 255, 255)
+                            )
+                        
+                            # Texte au dessus du visage detecté
+                            #draw.text((left, top - int(heightFrame * TEXT_Y_OFFSET_SCALE) - text_height), name, font=font, fill=(0, 255, 0))
+
+
+                            
+                    frame = np.array(pil_image)
+                            # REconversion en BGB
+                    frame = cv2.cvtColor(frame, cv2.COLOR_RGB2BGR)
+
+                    cv2.imwrite('result0.jpg', frame)
+                        
+                        
+
+                # Ajout de texte pour afficher les FPS
+        cv2.putText(frame, "Nombre d'images par seconde: {:.2f}".format(tm.getFPS()), (1, 16), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0,0,0), 2)
+                
+                # Convertion d'image en jpg
+        ret, buffer = cv2.imencode('.jpg', frame)
+
+        cv2.imwrite('result.jpg', frame)
+                
+
+                # On retourne (Yield) l'image en binaire
+        frame_bytes = buffer.tobytes()
+        yield (b'--frame\r\n'
+                b'Content-Type: image/jpeg\r\n\r\n' + frame_bytes + b'\r\n')
+
+
+@app.route("/")
+def index():
+    #return "<h1>HELLO WORLD!!!!!!!!!!</h1>"
+    return render_template('landing.html')
+
+@app.route("/login", methods=['GET', 'POST'])
+def login():
+    if current_user.is_authenticated:
+        return redirect(url_for('home'))
+    
+
+    if request.method == 'POST':
+        email = request.form['email']
+        password = request.form['password']
+        user = Utilisateur.query.filter_by(email=email).first()
+
+        if user is None or not user.check_password(password):
+            flash('Email ou mot de passe invalide', 'error')
+            return redirect(url_for('login'))
+
+
+        login_user(user, remember=True)
+        
+        next_page = request.args.get('next')
+
+        if not next_page or urlparse(next_page).netloc != '':
+            next_page = url_for('home')
+
+        return redirect(next_page)
+
+    return render_template('login.html')
+
+
+@app.route("/inscription", methods=['GET', 'POST'])
+def inscription():
+    if current_user.is_authenticated:
+        return redirect(url_for('home'))
+
+
+    if request.method == 'POST':
+        username = request.form['username']
+        email = request.form['email']
+        password = request.form['password']
+        confirm_password = request.form['confirm_password']
+        file = request.files['img']
+        img_enBinaire = file.read()
+        photo_personne = BytesIO(img_enBinaire)
+        image = face_recognition.load_image_file(photo_personne)
+        empreinte_fa = face_recognition.face_encodings(image)[0]
+
+        users = Utilisateur.query.filter_by(email=email).first()
+        print(users)
+        if users == None :
+            if password == confirm_password:
+                hashed_password = bcrypt.generate_password_hash(password)
+                hashed_confirmpassword = bcrypt.generate_password_hash(confirm_password)
+                user = Utilisateur(username=username, email=email, photo = img_enBinaire, empreinte_facial = empreinte_fa, 
+                    password = hashed_password, confirmpassword = hashed_confirmpassword)
+     
+                db.session.add(user)
+                db.session.commit()
+                return redirect(url_for('home')) 
+            else:
+                erreur = 'Les mots de passe ne correspondent pas. Veuillez réessayer.'
+                return render_template('inscription.html', erreur=erreur)
+
+        elif  users :
+            erreur = 'Cet adresse mail est déja existe déjà. Veuillez en choisir une autre.'
+            return render_template('inscription.htm', erreur=erreur)
+            
+        else:
+            erreur = 'Les mots de passe ne correspondent pas. Veuillez réessayer.'
+            return render_template('inscription.html', erreur=erreur)
+    return render_template('inscription.htm')
+
+@app.route("/home")
+@login_required
+def home():
+    return render_template('home.html')
+
+
+@app.route('/auth-camera', methods=['GET', 'POST'])
+def camera():
+    
+    if current_user.is_authenticated:
+        return redirect(url_for('home'))
+    
+    if request.method == 'POST':
+        
+        return redirect(url_for("login"))
+    
+
+    
+    return Response(gen_frames(), mimetype='multipart/x-mixed-replace; boundary=frame')
+
+
+@app.route('/webcam', methods=['GET', 'POST'])
+def webcam():
+    if current_user.is_authenticated:
+        return redirect(url_for('home'))
+
+    return render_template('camera.html')
+    
+
+ 
+@app.route('/logout')
+def logout():
+    logout_user()
+    return redirect(url_for('login'))

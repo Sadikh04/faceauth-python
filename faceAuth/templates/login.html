@@ -1,0 +1,56 @@
+{% extends 'base.html' %}
+{% block title %} Connexion {% endblock %}
+{% block jsstyle %}
+<!-- Ajoutez ici les liens vers les fichiers JS et CSS nécessaires -->
+
+<style>
+
+  
+body {
+    background-color: rgb(50, 192, 192);
+    background-size: cover;
+    background-position: center;
+    
+}
+</style>
+{% endblock %}
+
+{% block content %}
+<!-- Votre code HTML pour la page de connexion -->
+<section class="donate-page-area pt-90 pb-80">
+    <div class="container mt-4">
+      <div class="row justify-content-center">
+        <div class="col-lg-5">
+          <div class="card">
+            <div class="card-header">
+              <h3 class="card-title ">Connexion</h3>
+            </div>
+            <div class="card-body">
+              <form action="{{ url_for('login') }}" class="form" method="POST">
+                <div class="form-group mt-4">
+                  <label for="email">Email</label>
+                  <input type="email" class="form-control" id="email" name="email" placeholder="Ex: user@ec2lt.sn" autofocus=true>
+                </div>
+                <div class="form-group mt-4">
+                  <label for="password">Mot de passe</label>
+                  <input type="password" class="form-control" id="password" name="password" placeholder="Mot de passe">
+                </div>
+                <div class="text-center mt-4">
+                  <button type="submit" class="btn btn-info">Se connecter</button>
+                </div>
+              </form>
+              <br>
+              <hr>
+              <div class="text-center mt-3">
+                <!-- Bouton pour démarrer l'authentification faciale -->
+                <a href="{{ url_for('webcam') }}" class="btn btn-secondary">Authentification faciale</a>
+              </div>
+              <hr>
+              <p class="mt-4">Vous n'avez pas de compte ? <a href="{{ url_for('inscription') }}">Inscription</a></p>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+{% endblock content %}

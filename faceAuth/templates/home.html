@@ -1,0 +1,14 @@
+{% extends 'base.html' %}
+
+{% block content %}
+<h2>Bienvenue sur la page d'accueil</h2>
+<p>Voici la page d'accueil après authentification.</p>
+
+
+{% if current_user.is_authenticated %}
+ Bonjour {{ current_user.username }}!
+ {% endif %}
+ <br>
+ <hr>
+ <a href="{{ url_for('logout') }}">Se déconnecter</a>
+{% endblock %}

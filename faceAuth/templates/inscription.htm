@@ -1,0 +1,81 @@
+
+{% extends 'base.html' %}
+{% block title %} Inscription {% endblock %}
+{% block jsstyle %}
+
+
+<script src="https://cdn.jsdelivr.net/npm/@popperjs/core@2.10.1/dist/umd/popper.min.js"></script>
+<script src="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/js/bootstrap.min.js"></script>
+
+<script>
+  var loadFile = function(event) {
+      var image = document.getElementById('output');
+      image.src=URL.createObjectURL(event.target.files[0]);
+  };
+</script>
+{%endblock%}
+
+{% block content %}
+<style>
+    body {
+        background-image: url('static/img/44.jpeg');
+        background-repeat: no-repeat;
+        background-size: cover;
+    }
+.donate-page-area{
+    margin: 50px ;
+}
+.form-group{
+    margin: 20px;
+}
+
+</style>
+<section class="donate-page-area pt-90 pb-80">
+    <div class="container">
+      <div class="row justify-content-center">
+        <div class="col-lg-5">
+          <div class="card " >
+            <div class="card-header">
+              <h3 class="card-title">Inscription</h3>
+            </div>
+            <div class="card-body">
+              <form action="{{ url_for('inscription') }}" class="form" method="POST" enctype="multipart/form-data">
+                <div class="form-group">
+                  <label for="nom">Nom d'utilisateur</label>
+                  <input type="text" class="form-control" id="nom" name="username" placeholder="Ex: Ismaïla FALL" autofocus=true>
+                </div>
+                <div class="form-group">
+                  <label for="matri">Email</label>
+                  <input type="email" class="form-control" id="matri" name="email" placeholder="Ex: user@ec2lt.sn">
+                </div>
+                <div class="form-group">
+                    <label for="password" class="form-label">Mot de passe:</label>
+                    <input type="password" class="form-control" id="password" name="password" required>
+                </div>
+                <div class="form-group">
+                    <label for="confirm_password" class="form-label">Confirmation de mot de passe:</label>
+                    <input type="password" class="form-control" id="confirm_password" name="confirm_password" required>
+                </div>
+                <div class="form-group">
+                  <label for="img">Ajouter photo</label>
+                  <input type="file" accept="image/gif, image/jpeg, image/jpg, image/png" class="form-control-file" id="img" name="img" onchange="loadFile(event)" required>
+                  <img id="output" width="200" />	
+                </div>
+                <div class="text-center">
+                  <button type="submit" class="btn btn-info">S'inscrire</button>
+                </div>
+              </form>
+              <div class="text-center"></div>
+                <hr>
+                <p class="mt-4">Vous disposez déjà d'un compte ? <a href="{{ url_for('login') }}"> Page de connexion</a></p>
+              </div> 
+            </div>
+        </div>
+        </div>
+      </div>
+    </div>
+  </section>
+  <br>
+  <br>
+  <br>
+{% endblock content %}
